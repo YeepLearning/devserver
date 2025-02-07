@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^1.1.9",
+    "@tailwindcss/typography": "^0.5.16",
     "ai": "^4.1.21",
     "next": "15.1.6",
     "react": "^19.0.0",
