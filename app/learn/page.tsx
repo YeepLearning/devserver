@@ -46,7 +46,7 @@ const initialContent: ContentBlock[] = [
     {
         id: '1',
         type: 'image_with_text',
-        image: '/example-image.jpg',
+        image: '/puppy.png',
         text: '# Welcome to Language Models\n\nLet\'s learn about the technology behind AI!',
     },
     {
@@ -61,20 +61,6 @@ const initialContent: ContentBlock[] = [
             { id: 'a', text: 'Terms and conditions agreements', isCorrect: true },
             { id: 'b', text: 'Travel and culture books', isCorrect: false },
             { id: 'c', text: 'Town and Country magazines', isCorrect: false },
-        ],
-    },
-    {
-        id: '4',
-        type: 'text',
-        content: 'Language models can predict the next word in a sequence. Which of these predictions makes the most sense?',
-    },
-    {
-        id: '5',
-        type: 'multiple_choice',
-        choices: [
-            { id: 'a', text: '"Thanks for the update" + "on"', isCorrect: true },
-            { id: 'b', text: '"Thanks for the update" + "truck"', isCorrect: false },
-            { id: 'c', text: '"Thanks for the update" + "banana"', isCorrect: false },
         ],
     }
 ];
@@ -117,7 +103,7 @@ export default function LearnPage() {
                 newBlock = {
                     id: String(currentLength + 1),
                     type: 'image_with_text',
-                    image: '/example-image.jpg',
+                    image: '/puppy.png',
                     text: '## New Concept\n\nHere\'s an illustration of how this works.',
                 };
                 break;
@@ -140,6 +126,7 @@ export default function LearnPage() {
 
         // Scroll to the new content after it's added
         setTimeout(() => {
+            console.log('scrolling to bottom');
             lastBlockRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
     };
