@@ -52,7 +52,7 @@ const initialContent: ContentBlock[] = [
     {
         id: '2',
         type: 'text',
-        content: 'First, let\'s test your knowledge about language models.',
+        content: 'First, let\'s test your knowledge about language models. What kind of data was used to train the T&C model?',
     },
     {
         id: '3',
@@ -63,6 +63,20 @@ const initialContent: ContentBlock[] = [
             { id: 'c', text: 'Town and Country magazines', isCorrect: false },
         ],
     },
+    {
+        id: '4',
+        type: 'text',
+        content: 'Language models can predict the next word in a sequence. Which of these predictions makes the most sense?',
+    },
+    {
+        id: '5',
+        type: 'multiple_choice',
+        choices: [
+            { id: 'a', text: '"Thanks for the update" + "on"', isCorrect: true },
+            { id: 'b', text: '"Thanks for the update" + "truck"', isCorrect: false },
+            { id: 'c', text: '"Thanks for the update" + "banana"', isCorrect: false },
+        ],
+    }
 ];
 
 export default function LearnPage() {
@@ -73,23 +87,47 @@ export default function LearnPage() {
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [showingCorrect, setShowingCorrect] = useState<Record<string, boolean>>({});
 
-    const bottomRef = useRef<HTMLDivElement>(null);
-
-    const scrollToBottom = () => {
-        bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-    };
+    const lastBlockRef = useRef<HTMLDivElement>(null);
 
     const handleAnswer = (blockId: string, answer: string) => {
         setAnswers(prev => ({ ...prev, [blockId]: answer }));
     };
 
     const handleContinue = () => {
-        // Add new content block (in a real app, this would be more sophisticated)
-        const newBlock: ContentBlock = {
-            id: String(content.length + 1),
-            type: 'text',
-            content: 'Here\'s another piece of content!',
-        };
+        // Cycle through different types of blocks
+        const blockTypes = ['text', 'multiple_choice', 'image_with_text'];
+        const currentLength = content.length;
+        const nextType = blockTypes[currentLength % blockTypes.length];
+
+        let newBlock: ContentBlock;
+
+        switch (nextType) {
+            case 'multiple_choice':
+                newBlock = {
+                    id: String(currentLength + 1),
+                    type: 'multiple_choice',
+                    choices: [
+                        { id: 'a', text: 'This is the correct answer', isCorrect: true },
+                        { id: 'b', text: 'This is incorrect', isCorrect: false },
+                        { id: 'c', text: 'This is also incorrect', isCorrect: false },
+                    ],
+                };
+                break;
+            case 'image_with_text':
+                newBlock = {
+                    id: String(currentLength + 1),
+                    type: 'image_with_text',
+                    image: '/example-image.jpg',
+                    text: '## New Concept\n\nHere\'s an illustration of how this works.',
+                };
+                break;
+            default:
+                newBlock = {
+                    id: String(currentLength + 1),
+                    type: 'text',
+                    content: 'Let\'s explore this concept further...',
+                };
+        }
 
         setContent(prev => [...prev, newBlock]);
         setProgress(prev => Math.min(100, prev + 10));
@@ -101,10 +139,12 @@ export default function LearnPage() {
         }
 
         // Scroll to the new content after it's added
-        setTimeout(scrollToBottom, 100);
+        setTimeout(() => {
+            lastBlockRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }, 100);
     };
 
-    const renderBlock = (block: ContentBlock) => {
+    const renderBlock = (block: ContentBlock, index: number) => {
         const content = (() => {
             switch (block.type) {
                 case 'image_with_text':
@@ -148,36 +188,43 @@ export default function LearnPage() {
             }
         })();
 
+        const isLastBlock = index === content.length - 1;
+
         return (
-            <div key={block.id} className="min-h-[100vh] flex items-center justify-center py-20">
-                <div className="w-full">
-                    {content}
-                </div>
+            <div
+                key={block.id}
+                ref={isLastBlock ? lastBlockRef : undefined}
+            >
+                {content}
             </div>
         );
     };
 
     return (
-        <div className="min-h-screen bg-zinc-50 dark:bg-zinc-900">
+        <div className="bg-zinc-50 dark:bg-zinc-900">
             <ProgressBar
                 progress={progress}
                 stars={stars}
                 message={message}
             />
 
-            <div className="max-w-2xl mx-auto">
-                {content.map(block => renderBlock(block))}
+            <div className="min-h-screen max-w-2xl mx-auto">
+                {content.map((block, index) => renderBlock(block, index))}
 
-                <div className="p-4 flex justify-center">
-                    <button
-                        onClick={handleContinue}
-                        className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                    >
-                        Continue
-                    </button>
+                {/* Continue button - fixed on mobile, inline on desktop */}
+                <div className="fixed md:static bottom-0 left-0 right-0 bg-white md:bg-transparent dark:bg-zinc-900 md:dark:bg-transparent border-t md:border-t-0 border-zinc-200 dark:border-zinc-800">
+                    <div className="max-w-2xl mx-auto">
+                        <button
+                            onClick={handleContinue}
+                            className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                        >
+                            Continue
+                        </button>
+                    </div>
                 </div>
 
-                <div ref={bottomRef} />
+                {/* Bottom spacer */}
+                <div className="h-[40vh]" />
             </div>
         </div>
     );
