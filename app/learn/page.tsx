@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { motion, useScroll, useTransform } from 'framer-motion';
 import { ProgressBar } from '@/components/ProgressBar';
 import { ImageWithText } from '@/components/learning/ImageWithText';
 import { Text } from '@/components/learning/Text';
@@ -72,8 +73,45 @@ export default function LearnPage() {
     const [message, setMessage] = useState<string>();
     const [answers, setAnswers] = useState<Record<string, string>>({});
     const [showingCorrect, setShowingCorrect] = useState<Record<string, boolean>>({});
+    const [showPreviousBlocks, setShowPreviousBlocks] = useState(true);
+    const [isScrollingToNew, setIsScrollingToNew] = useState(false);
+    const lastManualScrollPosition = useRef(0);
 
     const lastBlockRef = useRef<HTMLDivElement>(null);
+    const containerRef = useRef<HTMLDivElement>(null);
+    const { scrollYProgress } = useScroll({
+        container: containerRef,
+        offset: ["start end", "end end"]
+    });
+
+    // Create opacity transform outside the render function
+    const fadeOutOpacity = useTransform(
+        scrollYProgress,
+        [0.7, 1],  // Adjust these values to control when the fade starts
+        [1, 0]
+    );
+
+    // Track scroll position
+    useEffect(() => {
+        const container = containerRef.current;
+        if (!container) return;
+
+        const handleScroll = () => {
+            if (isScrollingToNew) return; // Don't check during auto-scroll
+
+            const { scrollTop } = container;
+            const hasScrolledUp = scrollTop < lastManualScrollPosition.current - 40;
+
+            if (hasScrolledUp) {
+                setShowPreviousBlocks(true);
+            }
+
+            lastManualScrollPosition.current = scrollTop;
+        };
+
+        container.addEventListener('scroll', handleScroll);
+        return () => container.removeEventListener('scroll', handleScroll);
+    }, [isScrollingToNew]);
 
     const handleAnswer = (blockId: string, answer: string) => {
         setAnswers(prev => ({ ...prev, [blockId]: answer }));
@@ -117,22 +155,31 @@ export default function LearnPage() {
 
         setContent(prev => [...prev, newBlock]);
         setProgress(prev => Math.min(100, prev + 10));
+        setShowPreviousBlocks(false);
+        setIsScrollingToNew(true);
 
-        // If progress hits certain milestones, award stars
         if (progress === 30 || progress === 60 || progress === 90) {
             setStars(prev => prev + 1);
             setMessage('You earned a star! 🌟');
         }
 
-        // Scroll to the new content after it's added
+        // Start scroll animation
         setTimeout(() => {
-            console.log('scrolling to bottom');
             lastBlockRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 100);
+
+        // Reset scrolling state after animation
+        setTimeout(() => {
+            setIsScrollingToNew(false);
+            const container = containerRef.current;
+            if (container) {
+                lastManualScrollPosition.current = container.scrollTop;
+            }
+        }, 1000); // Adjust based on your scroll animation duration
     };
 
     const renderBlock = (block: ContentBlock, index: number) => {
-        const content = (() => {
+        const blockContent = (() => {
             switch (block.type) {
                 case 'image_with_text':
                     return (
@@ -178,12 +225,16 @@ export default function LearnPage() {
         const isLastBlock = index === content.length - 1;
 
         return (
-            <div
+            <motion.div
                 key={block.id}
                 ref={isLastBlock ? lastBlockRef : undefined}
+                animate={{
+                    opacity: isLastBlock || (!isScrollingToNew && showPreviousBlocks) ? 1 : 0
+                }}
+                transition={{ duration: 0.3 }}
             >
-                {content}
-            </div>
+                {blockContent}
+            </motion.div>
         );
     };
 
@@ -195,12 +246,17 @@ export default function LearnPage() {
                 message={message}
             />
 
-            <div className="min-h-screen max-w-2xl mx-auto">
-                {content.map((block, index) => renderBlock(block, index))}
+            <div
+                ref={containerRef}
+                className="min-h-screen max-w-2xl mx-auto overflow-y-auto h-[calc(100vh-4rem)]"
+            >
+                <div className="space-y-8">
+                    {content.map((block, index) => renderBlock(block, index))}
+                </div>
 
                 {/* Continue button - fixed on mobile, inline on desktop */}
-                <div className="fixed md:static bottom-0 left-0 right-0 bg-white md:bg-transparent dark:bg-zinc-900 md:dark:bg-transparent border-t md:border-t-0 border-zinc-200 dark:border-zinc-800">
-                    <div className="max-w-2xl mx-auto">
+                <div className="fixed md:static bottom-0 left-0 right-0 bg-white md:bg-transparent dark:bg-zinc-900 md:dark:bg-transparent border-t md:border-t-0 border-zinc-200 dark:border-zinc-800 z-50">
+                    <div className="max-w-2xl mx-auto p-4">
                         <button
                             onClick={handleContinue}
                             className="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
